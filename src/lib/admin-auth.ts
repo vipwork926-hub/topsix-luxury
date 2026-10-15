@@ -1,13 +1,34 @@
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+
 export const ADMIN_SESSION_COOKIE = "topsix_admin_session";
 export const ADMIN_SESSION_TTL_SECONDS = 8 * 60 * 60;
 
 const encoder = new TextEncoder();
 
-function getAuthSecrets() {
-  const password = process.env.ADMIN_PASSWORD;
-  const sessionSecret = process.env.ADMIN_SESSION_SECRET;
+async function getAuthSecrets() {
+  let runtimePassword: string | undefined;
+  let runtimeSessionSecret: string | undefined;
+
+  try {
+    const context = await getCloudflareContext({ async: true });
+    const bindings = context.env as typeof context.env & {
+      ADMIN_PASSWORD?: string;
+      ADMIN_SESSION_SECRET?: string;
+    };
+    runtimePassword = bindings.ADMIN_PASSWORD;
+    runtimeSessionSecret = bindings.ADMIN_SESSION_SECRET;
+  } catch {
+    // The context is unavailable in plain Node/Next runtimes; use process env there.
+  }
+
+  const password = runtimePassword || process.env.ADMIN_PASSWORD;
+  const sessionSecret = runtimeSessionSecret || process.env.ADMIN_SESSION_SECRET;
   if (!password || !sessionSecret) return null;
   return { password, signingSecret: `${sessionSecret}:${password}` };
+}
+
+export async function hasAdminAuthConfiguration() {
+  return (await getAuthSecrets()) !== null;
 }
 
 function encodeBase64Url(bytes: Uint8Array) {
@@ -34,7 +55,7 @@ async function getSigningKey(secret: string) {
 }
 
 export async function verifyAdminPassword(candidate: string) {
-  const secrets = getAuthSecrets();
+  const secrets = await getAuthSecrets();
   if (!secrets || candidate.length > 1024) return false;
 
   const [candidateDigest, expectedDigest] = await Promise.all([
@@ -51,7 +72,7 @@ export async function verifyAdminPassword(candidate: string) {
 }
 
 export async function createAdminSessionToken() {
-  const secrets = getAuthSecrets();
+  const secrets = await getAuthSecrets();
   if (!secrets) return null;
 
   const expiresAt = Math.floor(Date.now() / 1000) + ADMIN_SESSION_TTL_SECONDS;
@@ -64,7 +85,7 @@ export async function createAdminSessionToken() {
 }
 
 export async function verifyAdminSessionToken(token: string | undefined) {
-  const secrets = getAuthSecrets();
+  const secrets = await getAuthSecrets();
   if (!secrets || !token || token.length > 1024) return false;
 
   try {

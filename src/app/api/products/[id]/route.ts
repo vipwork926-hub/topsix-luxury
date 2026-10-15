@@ -23,7 +23,7 @@ async function isAdmin(request: NextRequest) {
 
 export async function GET(_request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
-  const supabase = getSupabaseClient();
+  const supabase = await getSupabaseClient();
   if (!supabase) return errorResponse(503, "DATABASE_NOT_CONFIGURED", "The product database is not configured.");
 
   const { data, error } = await supabase.from("products").select("*").eq("id", id).maybeSingle();
@@ -46,7 +46,7 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
   const patch = validateProductPatch(body);
   if (!patch) return errorResponse(400, "INVALID_PRODUCT", "The product update is invalid or empty.");
 
-  const supabase = getSupabaseAdminClient();
+  const supabase = await getSupabaseAdminClient();
   if (!supabase) return errorResponse(503, "DATABASE_NOT_CONFIGURED", "Product mutations require server Supabase credentials.");
 
   const { data, error } = await supabase.from("products").update(patch).eq("id", id).select("*").maybeSingle();
@@ -58,7 +58,7 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
 export async function DELETE(request: NextRequest, { params }: RouteContext) {
   if (!(await isAdmin(request))) return errorResponse(401, "UNAUTHORIZED", "Admin authentication is required.");
   const { id } = await params;
-  const supabase = getSupabaseAdminClient();
+  const supabase = await getSupabaseAdminClient();
   if (!supabase) return errorResponse(503, "DATABASE_NOT_CONFIGURED", "Product mutations require server Supabase credentials.");
 
   const { data, error } = await supabase.from("products").delete().eq("id", id).select("id").maybeSingle();

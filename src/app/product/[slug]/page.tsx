@@ -12,7 +12,7 @@ export default async function ProductPage({
 }) {
   const { slug } = await params;
   let product: Product | undefined;
-  const supabase = getSupabaseClient();
+  const supabase = await getSupabaseClient();
 
   if (supabase) {
     const { data, error } = await supabase.from("products").select("*").eq("slug", slug).maybeSingle();

@@ -3,6 +3,7 @@ import {
   ADMIN_SESSION_COOKIE,
   ADMIN_SESSION_TTL_SECONDS,
   createAdminSessionToken,
+  hasAdminAuthConfiguration,
   verifyAdminPassword,
 } from "@/lib/admin-auth";
 
@@ -16,7 +17,7 @@ export async function POST(request: NextRequest) {
     return errorResponse(403, "FORBIDDEN_ORIGIN", "This sign-in request is not allowed.");
   }
 
-  if (!process.env.ADMIN_PASSWORD || !process.env.ADMIN_SESSION_SECRET) {
+  if (!(await hasAdminAuthConfiguration())) {
     return errorResponse(503, "AUTH_NOT_CONFIGURED", "Admin sign-in is not configured on this deployment.");
   }
 

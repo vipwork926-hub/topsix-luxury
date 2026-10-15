@@ -20,7 +20,7 @@ async function isAdmin(request: NextRequest) {
 }
 
 export async function GET() {
-  const supabase = getSupabaseClient();
+  const supabase = await getSupabaseClient();
   if (!supabase) return errorResponse(503, "DATABASE_NOT_CONFIGURED", "The product database is not configured.");
 
   const { data, error } = await supabase.from("products").select("*").order("created_at", { ascending: false });
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
   const product = validateNewProduct(body);
   if (!product) return errorResponse(400, "INVALID_PRODUCT", "The product fields are invalid or incomplete.");
 
-  const supabase = getSupabaseAdminClient();
+  const supabase = await getSupabaseAdminClient();
   if (!supabase) return errorResponse(503, "DATABASE_NOT_CONFIGURED", "Product mutations require server Supabase credentials.");
 
   const { data, error } = await supabase
